@@ -1,7 +1,9 @@
-from enum import Enum
-from src.models._utils import ModelBase
-from pydantic import Field
 from datetime import datetime
+from enum import Enum
+
+from pydantic import Field
+
+from altron_types.utils import ModelBase
 
 
 class MessageRole(str, Enum):

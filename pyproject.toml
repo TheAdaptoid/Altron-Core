@@ -5,15 +5,18 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "altron-types",
     "fastapi>=0.116.1",
     "pydantic>=2.11.7",
     "uvicorn>=0.35.0",
 ]
 
 [dependency-groups]
-dev = [
-    "mypy>=1.17.1",
-    "pytest>=8.4.1",
-    "pytest-cov>=6.2.1",
-    "ruff>=0.12.8",
-]
+dev = ["mypy>=1.17.1", "pytest>=8.4.1", "pytest-cov>=6.2.1", "ruff>=0.12.8"]
+
+
+[tool.uv.workspace]
+members = ["packages/altron-db", "packages/altron-types"]
+
+[tool.uv.sources]
+altron-types = { workspace = true }

@@ -1,6 +1,7 @@
-from src.models._utils import ModelBase
 from pydantic import Field
-from src.models.message import Message
+
+from altron_types.message import Message
+from altron_types.utils import ModelBase
 
 
 class Thread(ModelBase):

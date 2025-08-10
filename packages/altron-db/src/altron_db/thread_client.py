@@ -1,7 +1,8 @@
 from datetime import datetime
 
-from models.thread import Thread
-from storage.database import DataBase
+from altron_types import Thread
+
+from altron_db.database import DataBase
 
 DEFAULT_THREAD_TITLE: str = "New Thread"
 DEFAULT_THREAD_DIR: str = "/threads"

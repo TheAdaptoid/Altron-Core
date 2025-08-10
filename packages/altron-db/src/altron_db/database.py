@@ -1,6 +1,7 @@
 import os
 import uuid
-from src.utils.exceptions import EntryNotFoundError
+
+from altron_db.exceptions import EntryNotFoundError
 
 DEFAULT_DB_DIR: str = "../database"
 

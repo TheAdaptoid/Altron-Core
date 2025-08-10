@@ -1,7 +1,7 @@
-import os
-import tempfile
-import pytest
 from unittest import mock
+
+import pytest
+
 from storage import database
 
 

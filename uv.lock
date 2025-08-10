@@ -2,11 +2,19 @@ version = 1
 revision = 2
 requires-python = ">=3.12"
 
+[manifest]
+members = [
+    "altron-core",
+    "altron-db",
+    "altron-types",
+]
+
 [[package]]
 name = "altron-core"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "altron-types" },
     { name = "fastapi" },
     { name = "pydantic" },
     { name = "uvicorn" },
@@ -22,6 +30,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "altron-types", editable = "packages/altron-types" },
     { name = "fastapi", specifier = ">=0.116.1" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "uvicorn", specifier = ">=0.35.0" },
@@ -34,6 +43,28 @@ dev = [
     { name = "pytest-cov", specifier = ">=6.2.1" },
     { name = "ruff", specifier = ">=0.12.8" },
 ]
+
+[[package]]
+name = "altron-db"
+version = "0.1.0"
+source = { editable = "packages/altron-db" }
+dependencies = [
+    { name = "altron-types" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "altron-types", editable = "packages/altron-types" }]
+
+[[package]]
+name = "altron-types"
+version = "0.1.0"
+source = { editable = "packages/altron-types" }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pydantic", specifier = ">=2.11.7" }]
 
 [[package]]
 name = "annotated-types"

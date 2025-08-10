@@ -1,0 +1,12 @@
+[project]
+name = "altron-types"
+version = "0.1.0"
+description = "Utility library to store data types for the Altron project"
+readme = "README.md"
+authors = [{ name = "TheAdaptoid", email = "mhwkmn22@gmail.com" }]
+requires-python = ">=3.12"
+dependencies = ["pydantic>=2.11.7"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
