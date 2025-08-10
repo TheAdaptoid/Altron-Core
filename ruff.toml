@@ -1,0 +1,6 @@
+target-version = "py312"
+output-format = "concise"
+line-length = 88
+
+select = ["F", "E", "I", "C90", "D"]
+ignore = ["D212", "D413"]
