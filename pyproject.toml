@@ -7,16 +7,26 @@ requires-python = ">=3.12"
 dependencies = [
     "altron-types",
     "fastapi>=0.116.1",
+    "lmstudio>=1.4.1",
     "pydantic>=2.11.7",
+    "python-dotenv>=1.1.1",
+    "requests>=2.32.4",
+    "rich>=14.1.0",
     "uvicorn>=0.35.0",
 ]
+
+[project.scripts]
+altron = "altron_core.cli.main:main"
 
 [dependency-groups]
 dev = ["mypy>=1.17.1", "pytest>=8.4.1", "pytest-cov>=6.2.1", "ruff>=0.12.8"]
 
+[tool.uv]
+package = true
 
 [tool.uv.workspace]
 members = ["packages/altron-db", "packages/altron-types"]
 
 [tool.uv.sources]
 altron-types = { workspace = true }
+altron-db = { workspace = true }
