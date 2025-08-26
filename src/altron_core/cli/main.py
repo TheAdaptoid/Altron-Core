@@ -36,7 +36,7 @@ def handle_commands(command: str) -> None:
 
 def get_agent_response(thread: list[Message]) -> Message:
     agent = Agent(role=AgentRole.GENERALIST)
-    response_stream = agent.invoke_stream(thread)
+    response_stream = agent.invoke(thread)
 
     # Prepare for streaming response
     print(f"{C_AGENT}Altron >>>{RESET} ", end="")

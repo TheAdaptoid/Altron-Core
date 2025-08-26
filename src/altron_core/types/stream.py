@@ -17,6 +17,7 @@ class ToolCall(TypedDict):
 class ChoiceDelta(TypedDict):
     role: str
     content: str
+    reasoning_content: str
     tool_calls: list[ToolCall]
 
 
