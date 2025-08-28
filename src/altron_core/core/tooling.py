@@ -1,9 +1,11 @@
 import inspect
 import json
 import re
-from typing import Any, Callable, Literal, get_type_hints
+from typing import Any, Callable, Literal, Union, get_args, get_origin
 
-from altron_core.types.tools import ToolParameter, ToolSchema
+from docstring_parser import parse as parse_docstring
+
+from altron_core.types.tools import ToolSchema
 
 
 class Tool:
@@ -23,32 +25,51 @@ class Tool:
     def schema(self) -> ToolSchema:
         """Generate a tool schema for this tool."""
         sig = inspect.signature(self.func)
-        type_hints = get_type_hints(self.func)
-        doc = self.func.__doc__ or ""
-        param_docs = self._parse_param_docs(doc)
+        doc = parse_docstring(self.func.__doc__ or "")
 
-        parameters: list[ToolParameter] = []
-        for param_name, param in sig.parameters.items():
-            if param_name not in type_hints:
-                continue  # Skip if no type hint
+        # map param name -> description from docstring
+        doc_params = {p.arg_name: p.description for p in doc.params}
 
-            py_type = type_hints[param_name]
-            schema_type: str = self._map_type(py_type)
+        parameters = []
+        for name, param in sig.parameters.items():
+            ann = param.annotation
+            required = param.default is inspect.Parameter.empty
+
+            # --- handle Optional[T] (Union[T, None]) ---
+            if get_origin(ann) is Union and type(None) in get_args(ann):
+                # Extract the non-None type
+                args = [a for a in get_args(ann) if a is not type(None)]
+                if args:
+                    ann = args[0]
+                required = False  # Optional means not required
+
+            # Determine type
+            p_type = "string"  # default
+            if ann is int:
+                p_type = "integer"
+            elif ann is float:
+                p_type = "number"
+            elif ann is bool:
+                p_type = "boolean"
+            elif get_origin(ann) is Literal:
+                args = get_args(ann)
+                if all(isinstance(a, str) for a in args):
+                    p_type = "string"
+                elif all(isinstance(a, (int, float)) for a in args):
+                    p_type = "number"
 
             parameters.append(
                 {
-                    "name": param_name,
-                    "description": param_docs.get(
-                        param_name, "No description provided."
-                    ),
-                    "type": schema_type,
-                    "required": param.default is inspect.Parameter.empty,
+                    "name": name,
+                    "description": doc_params.get(name, "No description provided."),
+                    "type": p_type,
+                    "required": required,
                 }
             )
 
         return {
             "name": self.name,
-            "description": self.description,
+            "description": doc.short_description or self.description,
             "parameters": parameters,
         }
 

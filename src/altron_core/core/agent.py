@@ -6,7 +6,7 @@ from os import getenv
 from dotenv import load_dotenv
 
 from altron_core.core.tooling import Tool, ToolExecutor
-from altron_core.core.tools import calculator  # Ensure tools are registered
+from altron_core.core.tools import calculator, time_utils  # Ensure tools are registered
 from altron_core.networking import inference
 from altron_core.types.chunks import ChoiceChunk, ToolCall
 from altron_core.types.message import Message
@@ -50,7 +50,7 @@ def prompt_tool_map(role: AgentRole) -> tuple[str, list[Tool]]:
             return (
                 "You are a generalist agent."
                 "Your task is to assist with a wide range of queries."
-            ), [calculator]
+            ), [calculator, time_utils]
         case AgentRole.RESEARCHER:
             return (
                 "You are a researcher agent."

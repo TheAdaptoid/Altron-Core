@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from decimal import DivisionByZero
 from typing import Literal
 
@@ -43,3 +44,46 @@ def calculator(
         raise ValueError(f"Unsupported operation: {operation}")
 
     return round(result, 4)
+
+
+@Tool
+def time_utils(
+    operation: Literal["now", "add"],
+    amount: int | None,
+    unit: Literal["days", "hours", "minutes"],
+) -> str:
+    """
+    Perform time-related operations and returns the result as an ISO-formatted string.
+
+    Args:
+        operation (Literal["now", "add"]): The operation to perform.
+            - "now": Returns the current datetime.
+            - "add": Adds a specified amount of time to the current datetime.
+        amount (int | None): The amount of time to add. Required if operation is "add".
+        unit (Literal["days", "hours", "minutes"]): The unit of time to add. Required if operation is "add".
+
+    Returns:
+        str: The resulting datetime as an ISO-formatted string, or "Invalid Operation." if the operation is not recognized.
+
+    Raises:
+        KeyError: If an invalid unit is provided when operation is "add".
+    """
+    if operation == "now":
+        return datetime.now().isoformat()
+
+    if operation == "add":
+        if amount is None:
+            raise ValueError("`amount` can not be `None` during an `add` operation.")
+
+        if isinstance(amount, str):
+            try:
+                amount = int(amount)
+            except Exception:
+                raise TypeError("`amount` must be an integer")
+
+        unit_map: dict = {"days": 0, "hours": 0, "minutes": 0}
+        unit_map[unit] = amount
+        future = datetime.now() + timedelta(**unit_map)
+        return future.isoformat()
+
+    raise "Invalid Operation."
