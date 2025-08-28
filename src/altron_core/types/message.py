@@ -1,18 +1,9 @@
 from typing import Literal, NotRequired, TypedDict
 
+from altron_core.types.tools import ToolCall
+
 ROLE = Literal["user", "assistant", "system", "tool"]
 """The role of the entity sending the message."""
-
-
-class ToolCallFunction(TypedDict):
-    name: str
-    arguments: str  # JSON string of arguments
-
-
-class ToolCall(TypedDict):
-    id: str
-    type: Literal["function"]
-    function: ToolCallFunction
 
 
 class Message(TypedDict):

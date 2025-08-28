@@ -1,10 +1,3 @@
-from .message import Message
-from .stream import FINISH_REASON, ChoiceChunk, ChoiceDelta, CompletionChunk
+from altron_core.types.message import Message
 
-__all__ = [
-    "Message",
-    "ChoiceChunk",
-    "ChoiceDelta",
-    "CompletionChunk",
-    "FINISH_REASON",
-]
+__all__ = ["Message"]

@@ -9,6 +9,7 @@ class ToolCallFunction(TypedDict):
 
 
 class ToolCall(TypedDict):
+    index: int
     id: str
     type: Literal["function"]
     function: ToolCallFunction

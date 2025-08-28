@@ -5,53 +5,71 @@ from os import getenv
 
 from dotenv import load_dotenv
 
-from altron_core.core.tooling import EventCallbacks, ToolExecutor
+from altron_core.core.tooling import Tool, ToolExecutor
 from altron_core.core.tools import calculator  # Ensure tools are registered
-from altron_core.networking import lmstudio
-from altron_core.types import Message
-from altron_core.types.stream import ChoiceChunk, ToolCall
+from altron_core.networking import inference
+from altron_core.types.chunks import ChoiceChunk, ToolCall
+from altron_core.types.message import Message
+from altron_core.types.streams import InvocationStream
 from altron_core.types.tools import ToolRequest, ToolResponse
 
 load_dotenv()
 
-DEFAULT_GENERALIST: str = "qwen/qwen3-4b-thinking-2507"  # "llama-3.2-3b-instruct"
+DEFAULT_GENERALIST: str = "qwen/qwen3-4b-thinking-2507"
 DEFAULT_RESEARCHER: str = "openai/gpt-oss-20b"
 DEFAULT_QUICK_RESPONDER: str = "google/gemma-3-1b"
 
 DEFAULT_REASONING_INDICATOR: str = "THOUGHT"
-
-type Token = str
-
-
-class ModelLoadError(Exception):
-    def __init__(self, model_id: str, fail_reason: str) -> None:
-        super().__init__(f"Failed to load model '{model_id}': {fail_reason}")
+DEFAUTL_TOOL_CALL_INDICATOR: str = "TOOL_CALL"
 
 
 class AgentRole(str, Enum):
+    """
+    An enumeration representing different roles an agent can assume within the system.
+
+    Attributes:
+        GENERALIST: Represents a generalist agent model.
+        RESEARCHER: Represents a researcher agent model.
+        QUICK_RESPONDER: Represents a quick responder agent model.
+    """
+
     GENERALIST = getenv("GENERALIST_MODEL", DEFAULT_GENERALIST)
     RESEARCHER = getenv("RESEARCHER_MODEL", DEFAULT_RESEARCHER)
     QUICK_RESPONDER = getenv("QUICK_RESPONDER_MODEL", DEFAULT_QUICK_RESPONDER)
 
 
-def role_prompt_map(role: AgentRole) -> str:
-    """Retrieve the prompt template for the given agent role."""
-    if role == AgentRole.GENERALIST:
-        return "You are a generalist agent. Your task is to assist with a wide range of queries."
-    elif role == AgentRole.RESEARCHER:
-        return "You are a researcher agent. Your task is to provide in-depth information and analysis."
-    elif role == AgentRole.QUICK_RESPONDER:
-        return "You are a quick responder agent. Your task is to provide fast and concise answers."
-    else:
-        raise ValueError(f"Unknown agent role: {role}")
+def prompt_tool_map(role: AgentRole) -> tuple[str, list[Tool]]:
+    """
+    Retrieve the prompt template and the tool set for the given agent role.
+
+    Raises:
+        ValueError: If the role is unknown
+    """
+    match role:
+        case AgentRole.GENERALIST:
+            return (
+                "You are a generalist agent."
+                "Your task is to assist with a wide range of queries."
+            ), [calculator]
+        case AgentRole.RESEARCHER:
+            return (
+                "You are a researcher agent."
+                "Your task is to provide in-depth information and analysis."
+            ), []
+        case AgentRole.QUICK_RESPONDER:
+            return (
+                "You are a quick responder agent."
+                "Your task is to provide fast and concise answers."
+            ), [calculator]
+        case _:
+            raise ValueError(f"Unknown agent role: {role}")
 
 
 class Agent:
     def __init__(self, role: AgentRole):
         self._role = role
-        self._prompt = role_prompt_map(role)
-        self._executor = ToolExecutor(tools=[calculator])
-        self._event_callbacks = EventCallbacks()
+        self._prompt, tools = prompt_tool_map(role)
+        self._executor = ToolExecutor(tools=tools)
 
     @property
     def role(self) -> AgentRole:
@@ -63,44 +81,48 @@ class Agent:
         if not isinstance(new_role, AgentRole):
             raise ValueError(f"Invalid role: {new_role}")
         self._role = new_role
-        self._prompt = role_prompt_map(new_role)
+        self._prompt, tools = prompt_tool_map(new_role)
+        self._executor.set_tools(new_tools=tools)
 
     def _process_tool_chunks(
         self,
         chunk: ChoiceChunk,
         prev_tool_request: ToolRequest | None,
         tool_requests: list[ToolRequest],
-    ):
+    ) -> ToolRequest:
         tool_call: ToolCall = chunk["delta"]["tool_calls"][0]
 
         # If this is the first tool call, initialize the request
         if prev_tool_request is None:
-            prev_tool_request = ToolRequest(
+            if ("id" not in tool_call) or ("name" not in tool_call["function"]):
+                raise ValueError(
+                    f"Invalid Tool Call Shape: {json.dumps(tool_call, indent=2)}"
+                )
+            return ToolRequest(
                 id=tool_call["id"],
                 name=tool_call["function"]["name"],
                 arguments=tool_call["function"]["arguments"],
             )
-            return
 
         # If the tool call ID has changed,
         # save the previous request,
         # and start a new one
         if "id" in tool_call and prev_tool_request["id"] != tool_call["id"]:
             tool_requests.append(prev_tool_request)
-            prev_tool_request = ToolRequest(
+            return ToolRequest(
                 id=tool_call["id"],
                 name=tool_call["function"]["name"],
                 arguments=tool_call["function"]["arguments"],
             )
-            return
 
         # If the tool call ID is the same, continue accumulating
         prev_tool_request["arguments"] += tool_call["function"]["arguments"]
+        return prev_tool_request
 
     def _process_reasoning_chunks(
         self, chunk: ChoiceChunk, is_reasoning: bool
-    ) -> tuple[Token, bool]:
-        token: Token = chunk["delta"]["reasoning_content"]
+    ) -> tuple[str, bool]:
+        token: str = chunk["delta"]["reasoning_content"]
 
         # Indicate start of reasoning
         if not is_reasoning:
@@ -112,8 +134,8 @@ class Agent:
 
     def _handle_content_chunks(
         self, chunk: ChoiceChunk, is_reasoning: bool
-    ) -> tuple[Token, bool]:
-        token: Token = chunk["delta"]["content"]
+    ) -> tuple[str, bool]:
+        token: str = chunk["delta"]["content"]
 
         # If we were in reasoning mode, exit it
         if is_reasoning:
@@ -125,7 +147,7 @@ class Agent:
 
     def _process_stream(
         self, stream: Generator[ChoiceChunk, None, str]
-    ) -> Generator[Token, None, list[ToolRequest]]:
+    ) -> Generator[str, None, list[ToolRequest]]:
         """
         Process a stream of response chunks, to yield tokens and return tool requests.
 
@@ -162,7 +184,9 @@ class Agent:
 
             # Check if the response is a tool call
             if "tool_calls" in chunk["delta"]:
-                self._process_tool_chunks(chunk, prev_tool_request, tool_requests)
+                prev_tool_request = self._process_tool_chunks(
+                    chunk, prev_tool_request, tool_requests
+                )
             elif "content" in chunk["delta"]:
                 token, is_reasoning = self._handle_content_chunks(chunk, is_reasoning)
                 yield token
@@ -185,7 +209,7 @@ class Agent:
     def _handle_tool_requests(
         self, tool_requests: list[ToolRequest]
     ) -> list[ToolResponse]:
-        """Handle the tool requests by executing them."""
+        """Handle tool requests by executing them."""
         tool_responses: list[ToolResponse] = []
         for request in tool_requests:
             result = self._executor.execute_tool(
@@ -201,47 +225,10 @@ class Agent:
             )
         return tool_responses
 
-    def invoke(self, messages: list[Message]) -> Generator[Token, None, Message]:
-        if not messages:
-            raise ValueError("Message list cannot be empty.")
-
-        # Make a copy to avoid modifying the original list
-        _messages: list[Message] = messages.copy()
-
-        # Insert the system prompt
-        messages.insert(0, Message(role="system", content=self._prompt))
-
-        # Start streaming the initial response
-        initial_stream = self._process_stream(
-            lmstudio.chat_stream(
-                model_id=self._role.value,
-                messages=_messages,
-                tools=self._executor.get_schemas(),
-            )
-        )
-        response_text: str = ""
-        tool_requests: list[ToolRequest] = []
-        while True:
-            try:
-                token: Token = next(initial_stream)
-                response_text += token
-                yield token
-            except StopIteration as e:
-                tool_requests = e.value
-                break
-        yield "\n"  # Send a new line for easier formatting by the user
-
-        # If there are no tool requests, return the response
-        if not tool_requests:
-            return Message(role="assistant", content=response_text)
-
-        # If there are tool requests, handle them
-        self._event_callbacks.on_tool_request(tool_requests)
-        tool_responses: list[ToolResponse] = self._handle_tool_requests(tool_requests)
-        self._event_callbacks.on_tool_response(tool_responses)
-
-        # Format the tool requests and responses
-        request_message: Message = Message(
+    def _yield_tool_requests(
+        self, tool_requests: list[ToolRequest]
+    ) -> Generator[str, None, Message]:
+        req_msg: Message = Message(
             role="assistant",
             content="",
             tool_calls=[
@@ -256,6 +243,55 @@ class Agent:
                 for req in tool_requests
             ],
         )
+
+        if "tool_calls" in req_msg:
+            yield (
+                f"<{DEFAUTL_TOOL_CALL_INDICATOR}>"
+                f"{json.dumps(req_msg['tool_calls'], indent=2)}"
+                f"</{DEFAUTL_TOOL_CALL_INDICATOR}>"
+            )
+
+        return req_msg
+
+    def invoke(self, messages: list[Message]) -> InvocationStream:
+        if not messages:
+            raise ValueError("Message list cannot be empty.")
+
+        # Make a copy to avoid modifying the original list
+        _messages: list[Message] = messages.copy()
+
+        # Insert the system prompt
+        messages.insert(0, Message(role="system", content=self._prompt))
+
+        # Start streaming the initial response
+        initial_stream = self._process_stream(
+            inference.chat(
+                model_id=self._role.value,
+                messages=_messages,
+                tools=self._executor.get_schemas(),
+            )
+        )
+        response_text: str = ""
+        tool_requests: list[ToolRequest] = []
+        while True:
+            try:
+                token: str = next(initial_stream)
+                response_text += token
+                yield token
+            except StopIteration as e:
+                tool_requests = e.value
+                break
+        yield "\n"  # Send a new line for easier formatting by the user
+
+        # If there are no tool requests, return the response
+        if not tool_requests:
+            return Message(role="assistant", content=response_text)
+
+        # If there are tool requests, handle them
+        request_message: Message = yield from self._yield_tool_requests(tool_requests)
+        tool_responses: list[ToolResponse] = self._handle_tool_requests(tool_requests)
+
+        # Format the tool requests and responses
         response_messages: list[Message] = [
             Message(
                 role="tool",
@@ -269,7 +305,7 @@ class Agent:
         followup_messages: list[Message] = (
             _messages + [request_message] + response_messages
         )
-        final_stream = self.invoke(followup_messages)
+        final_stream: InvocationStream = self.invoke(followup_messages)
         response_text = ""
         while True:
             try:

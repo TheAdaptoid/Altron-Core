@@ -3,7 +3,7 @@ import json
 import re
 from typing import Any, Callable, Literal, get_type_hints
 
-from altron_core.types.tools import ToolParameter, ToolRequest, ToolResponse, ToolSchema
+from altron_core.types.tools import ToolParameter, ToolSchema
 
 
 class Tool:
@@ -89,6 +89,10 @@ class ToolExecutor:
         self._tools: list[Tool] = tools if tools is not None else []
         self._lookup: dict[str, Tool] = {tool.name: tool for tool in self._tools}
 
+    def set_tools(self, new_tools: list[Tool]) -> None:
+        self._tools = new_tools
+        self._lookup = {tool.name: tool for tool in self._tools}
+
     def add_tools(self, new_tools: list[Tool]) -> None:
         """Add new tools to the executor."""
         self._tools.extend(new_tools)
@@ -150,19 +154,3 @@ class ToolExecutor:
             return json.dumps(result) if not isinstance(result, str) else result
         except Exception as e:
             return f"Error executing tool '{tool_name}': {str(e)}"
-
-
-class EventCallbacks:
-    def on_tool_request(self, tool_requests: list[ToolRequest]) -> None:
-        """Called when a tool is requested."""
-        for request in tool_requests:
-            tool_name = request["name"]
-            arguments = request["arguments"]
-            print(f"Tool requested: {tool_name} with arguments {arguments}")
-
-    def on_tool_response(self, tool_responses: list[ToolResponse]) -> None:
-        """Called when a tool response is received."""
-        for response in tool_responses:
-            tool_name = response["name"]
-            content = response["content"]
-            print(f"Tool response from {tool_name}: {content}")

@@ -1,6 +1,17 @@
 from typing import Literal, TypedDict
 
 
+class ToolCallFunction(TypedDict):
+    name: str
+    arguments: str  # JSON string of arguments
+
+
+class ToolCall(TypedDict):
+    id: str
+    type: Literal["function"]
+    function: ToolCallFunction
+
+
 class ToolRequest(TypedDict):
     id: str
     name: str
