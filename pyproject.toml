@@ -9,6 +9,7 @@ dependencies = [
     "docstring-parser>=0.17.0",
     "fastapi>=0.116.1",
     "lmstudio>=1.4.1",
+    "openai>=2.3.0",
     "pydantic>=2.11.7",
     "python-dotenv>=1.1.1",
     "requests>=2.32.4",
