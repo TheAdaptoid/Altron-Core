@@ -1,51 +1,36 @@
-from abc import ABC, abstractmethod
-from typing import Any
+from typing import Literal
 
 from altron_core.core2.dtypes import Message
 
+EMPTY_TEXT: str = "[No Text Content]"
 
-class IOManager(ABC):
+
+class IOManager:
     def __init__(self):
         pass
 
-    @abstractmethod
-    def shape_input(self, input_data: Any) -> Message:
-        """Convert the input data to a message object."""
-        pass
+    def string_to_message(
+        self, string: str, role: Literal["user", "assistant", "system", "tool"] = "user"
+    ) -> Message:
+        """Convert a string to a message object."""
+        return Message(role=role, text=string)
 
-    @abstractmethod
-    def shape_output(self, output_message: Message) -> Any:
-        """Convert the output data to a message object."""
-        pass
+    def message_to_string(self, message: Message) -> str | tuple[str, str]:
+        """
+        Convert a message object to a string.
 
+        If the message has a rationale, return a tuple of the rationale
+        and the message text. Otherwise, return the message text.
 
-class TextIOManager(IOManager):
-    """A class for managing text based inputs and outputs."""
+        Args:
+            message (Message): The message object to convert.
 
-    def shape_input(self, input_data: str) -> Message:
-        """Convert the input string to a message object."""
-        return Message(role="user", text=input_data)
-
-    def shape_output(self, output_message: Message) -> str:
-        """Convert the output message to a string."""
-        rationale: str = output_message.rationale or ""
-        content: str = output_message.text or ""
-
-        if rationale:
-            return f"<thought>{rationale.strip()}</thought>\n\n{content.strip()}"
+        Returns:
+            str | tuple[str, str]: The converted string or
+                tuple of rationale and message text.
+        """
+        message_text: str = message.text or EMPTY_TEXT
+        if message.rationale:
+            return message.rationale.strip(), message_text.strip()
         else:
-            return content.strip()
-
-
-class SpeechIOManager(IOManager):
-    """A class for managing speech based inputs and outputs."""
-
-    def __init__(self):
-        pass
-
-
-class TextImageIOManager(IOManager):
-    """A class for managing text and image based inputs and outputs."""
-
-    def __init__(self):
-        pass
+            return message_text.strip()
