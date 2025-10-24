@@ -1,19 +1,85 @@
 import json
 from dataclasses import asdict
+from typing import Any
 
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, WebSocketException
 
 from altron_core.core3.agent import Agent
-from altron_core.core3.dtypes import Message
+from altron_core.core3.dtypes import ConversePacket
 from altron_core.core3.inference import LMStudio_IE
+from altron_core.core3.threads import create_thread, load_thread, remove_thread
 
 app = FastAPI()
 
 
+@app.post("/thread")
+async def create_new_thread(title: str | None = None) -> dict[str, Any]:
+    """
+    Endpoint for creating new message threads.
+
+    Args:
+        title (str | None, optional):
+            The title of the new thread. Defaults to None.
+
+    Returns:
+        dict[str, Any]: The details of the newly created thread.
+    """
+    return asdict(create_thread(title=title))
+
+
 @app.get("/thread/{thread_id}")
-async def get_thread(thread_id: str):
-    return {"thread_id": thread_id, "messages": []}
+async def read_thread(thread_id: str) -> dict[str, Any]:
+    """
+    Endpoint for reading a message thread.
+
+    Args:
+        thread_id (str): The ID of the thread to read.
+
+    Returns:
+        dict[str, Any]: The details of the thread.
+    """
+    return asdict(load_thread(thread_id))
+
+
+@app.patch("/thread/{thread_id}")
+async def update_thread(thread_id: str, new_title: str) -> dict[str, Any]:
+    """
+    Endpoint for updating a message thread.
+
+    Args:
+        thread_id (str): The ID of the thread to update.
+        new_title (str): The new title for the thread.
+
+    Returns:
+        dict[str, Any]: The details of the updated thread.
+    """
+    raise NotImplementedError
+
+
+@app.delete("/thread/{thread_id}")
+async def delete_thread(thread_id: str) -> dict[str, str | bool]:
+    """
+    Endpoint for deleting a message thread.
+
+    Args:
+        thread_id (str): The ID of the thread to delete.
+
+    Returns:
+        dict[str, str | bool]: The details of the deleted thread.
+    """
+    try:
+        remove_thread(thread_id)
+    except Exception as e:
+        return {
+            "id": thread_id,
+            "deleted": False,
+            "error": str(e),
+        }
+    return {
+        "id": thread_id,
+        "deleted": True,
+    }
 
 
 @app.websocket("/ws")
@@ -21,25 +87,36 @@ async def converse(websocket: WebSocket):
     await websocket.accept()
 
     try:
-        msg_json: str = await websocket.receive_text()
-        msg_dict = json.loads(msg_json)
-        msg_obj = Message(**msg_dict)
+        # Parse the incoming packet
+        conv_pack_json: str = await websocket.receive_text()
+        conv_pack_dict = json.loads(conv_pack_json)
+        conv_pack_obj = ConversePacket.from_dict(conv_pack_dict)
 
-        agent = Agent(name="WebSocket Agent", inference_engine=LMStudio_IE())
+        # Spin up the agent
+        agent = Agent(
+            name="WebSocket Agent",
+            model_id="google/gemma-3-1b",
+            inference_engine=LMStudio_IE(),
+        )
 
-        async for state in agent.invoke(msg_obj, thread_id="1"):
-            text = json.dumps(asdict(state))
-            print(f"Sending state: {text}")
-            await websocket.send_text(text)
+        # Invoke the agent
+        async for state in agent.invoke(
+            user_message=conv_pack_obj.message, thread_id=conv_pack_obj.thread_id
+        ):
+            state_text: str = json.dumps(asdict(state))
+            print(f"Sending state: {state_text}")
+            await websocket.send_text(state_text)
 
             if state.prev_state in {"responding", "failed"}:
                 # Close the connection after responding or failing
                 await websocket.close()
 
     except WebSocketDisconnect:
+        print("Client disconnected.")
         await websocket.close()
 
     except WebSocketException:
+        print("WebSocket exception occurred.")
         await websocket.close()
 
 

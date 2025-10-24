@@ -72,6 +72,61 @@ class Message:
             text=msg.content or EMPTY_MESSAGE_TEXT,
         )
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Message":
+        return cls(
+            role=data["role"],
+            text=data["text"],
+            timestamp=data["timestamp"],
+        )
+
+
+@dataclass
+class MessageThread:
+    """
+    A collection of messages exchanged between the user and the agent.
+
+    Attributes:
+        id (str): The unique identifier for the message thread.
+            This is also the creation time in nanoseconds
+            and the filename where the thread is stored.
+        title (str): The title of the message thread.
+        messages (list[Message]): The list of messages in the thread.
+    """
+
+    id: str
+    title: str
+    messages: list[Message] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "MessageThread":
+        return cls(
+            id=data["id"],
+            title=data["title"],
+            messages=[Message.from_dict(msg) for msg in data["messages"]],
+        )
+
+
+@dataclass
+class ConversePacket:
+    """
+    A collection of data representing an initial user query.
+
+    Attributes:
+        thread_id (str): The unique identifier for the message thread.
+        message (Message): The initial user query.
+    """
+
+    thread_id: str
+    message: Message
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "ConversePacket":
+        return cls(
+            thread_id=data["thread_id"],
+            message=Message.from_dict(data["message"]),
+        )
+
 
 @dataclass
 class ActionPacket:

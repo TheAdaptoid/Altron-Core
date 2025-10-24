@@ -23,7 +23,7 @@ def get_lmstudio_url() -> str:
 
 class InferenceEngine(ABC):
     @abstractmethod
-    def infer(self, messages: list[Message]) -> list[Message]:
+    def infer(self, model_id: str, messages: list[Message]) -> list[Message]:
         pass
 
 
@@ -34,7 +34,7 @@ class LMStudio_IE(InferenceEngine):
             base_url=get_lmstudio_url(),
         )
 
-    def infer(self, messages: list[Message]) -> list[Message]:
+    def infer(self, model_id: str, messages: list[Message]) -> list[Message]:
         # Convert IMessage's to OpenAI spec
         spec_msgs: list[ChatCompletionMessageParam] = [
             msg.to_openai_spec() for msg in messages
@@ -42,7 +42,7 @@ class LMStudio_IE(InferenceEngine):
 
         # Call the LMStudio API
         model_response: ChatCompletion = self.client.chat.completions.create(
-            model="google/gemma-3-1b",
+            model=model_id,
             messages=spec_msgs,
         )
 
