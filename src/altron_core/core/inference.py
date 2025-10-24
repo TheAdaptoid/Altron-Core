@@ -8,7 +8,7 @@ from openai.types.chat import (
     ChatCompletionMessageParam,
 )
 
-from altron_core.core3.dtypes import Message
+from altron_core.types.dtypes import Message
 
 
 def get_lmstudio_url() -> str:

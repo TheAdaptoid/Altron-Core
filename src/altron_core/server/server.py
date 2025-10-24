@@ -5,10 +5,10 @@ from typing import Any
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, WebSocketException
 
-from altron_core.core3.agent import Agent
-from altron_core.core3.dtypes import ConversePacket
-from altron_core.core3.inference import LMStudio_IE
-from altron_core.core3.threads import create_thread, load_thread, remove_thread
+from altron_core.core.agent import Agent
+from altron_core.core.inference import LMStudio_IE
+from altron_core.core.threads import create_thread, load_thread, remove_thread
+from altron_core.types.dtypes import ConversePacket
 
 app = FastAPI()
 

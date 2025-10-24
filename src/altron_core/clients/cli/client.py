@@ -5,7 +5,7 @@ from dataclasses import asdict
 import requests
 import websockets
 
-from altron_core.core3.dtypes import ConversePacket, Message, MessageThread
+from altron_core.types.dtypes import ConversePacket, Message, MessageThread
 
 
 async def init_thread() -> str:

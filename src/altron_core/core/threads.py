@@ -3,7 +3,7 @@ import os
 from dataclasses import asdict
 from time import time_ns
 
-from altron_core.core3.dtypes import MessageThread
+from altron_core.types.dtypes import MessageThread
 
 THREAD_STORE: str = "./src/altron_core/threads"
 DEFAULT_THREAD_TITLE: str = "New Thread"

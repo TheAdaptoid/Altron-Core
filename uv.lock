@@ -6,19 +6,11 @@ resolution-markers = [
     "python_full_version < '3.13'",
 ]
 
-[manifest]
-members = [
-    "altron-core",
-    "altron-db",
-    "altron-types",
-]
-
 [[package]]
 name = "altron-core"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "altron-types" },
     { name = "docstring-parser" },
     { name = "fastapi" },
     { name = "lmstudio" },
@@ -41,7 +33,6 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "altron-types", editable = "packages/altron-types" },
     { name = "docstring-parser", specifier = ">=0.17.0" },
     { name = "fastapi", specifier = ">=0.116.1" },
     { name = "lmstudio", specifier = ">=1.4.1" },
@@ -61,28 +52,6 @@ dev = [
     { name = "pytest-cov", specifier = ">=6.2.1" },
     { name = "ruff", specifier = ">=0.12.8" },
 ]
-
-[[package]]
-name = "altron-db"
-version = "0.1.0"
-source = { editable = "packages/altron-db" }
-dependencies = [
-    { name = "altron-types" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "altron-types", editable = "packages/altron-types" }]
-
-[[package]]
-name = "altron-types"
-version = "0.1.0"
-source = { editable = "packages/altron-types" }
-dependencies = [
-    { name = "pydantic" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "pydantic", specifier = ">=2.11.7" }]
 
 [[package]]
 name = "annotated-types"
