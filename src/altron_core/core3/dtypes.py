@@ -1,6 +1,16 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Literal
+from openai.types.chat import (
+    ChatCompletionMessageParam,
+    ChatCompletionUserMessageParam,
+    ChatCompletionAssistantMessageParam,
+    ChatCompletionSystemMessageParam,
+    ChatCompletion,
+    ChatCompletionMessage,
+)
+
+EMPTY_MESSAGE_TEXT = "[[No Text Content]]"
 
 
 @dataclass
@@ -16,10 +26,51 @@ class Message:
     """
 
     text: str
-    role: Literal["user", "agent"]
+    role: Literal["user", "agent", "system"]
     timestamp: str = field(
         default_factory=lambda: datetime.now().isoformat()
     )  # ISO 8601 format
+
+    def to_openai_spec(self) -> ChatCompletionMessageParam:
+        """
+        Convert a Message object to a ChatCompletionMessageParam.
+
+        Returns the equivalent OpenAI spec message param for the given message.
+        Raises a ValueError if the message role is not recognized.
+        """
+        if self.role == "user":
+            return ChatCompletionUserMessageParam(
+                role=self.role,
+                content=self.text,
+            )
+        elif self.role == "agent":
+            return ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content=self.text,
+            )
+        elif self.role == "system":
+            return ChatCompletionSystemMessageParam(
+                role=self.role,
+                content=self.text,
+            )
+        else:
+            raise ValueError(f"Unsupported Message role: {self.role}")
+
+    @classmethod
+    def from_openai_spec(cls, msg: ChatCompletionMessage) -> "Message":
+        """
+        Create a Message object from a ChatCompletionMessage.
+
+        Args:
+            msg (ChatCompletionMessage): The OpenAI spec message to convert.
+
+        Returns:
+            Message: The equivalent Message object.
+        """
+        return cls(
+            role="agent" if msg.role == "assistant" else msg.role,
+            text=msg.content or EMPTY_MESSAGE_TEXT,
+        )
 
 
 @dataclass

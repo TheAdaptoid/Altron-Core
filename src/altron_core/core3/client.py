@@ -27,7 +27,11 @@ async def converse():
             while True:
                 try:
                     response = await ws.recv()
-                    print(f"Altron >>> {response}\n", end="", flush=True)
+                    print(
+                        f"Altron >>> {json.dumps(json.loads(response), indent=2)}\n",
+                        end="",
+                        flush=True,
+                    )
 
                 except websockets.ConnectionClosed:
                     print("\n\033[31m[[End of Line]]\033[0m\n")

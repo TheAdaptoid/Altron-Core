@@ -6,8 +6,14 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, WebSocketException
 
 from altron_core.core3.agent import Agent
 from altron_core.core3.dtypes import Message
+from altron_core.core3.inference import LMStudio_IE
 
 app = FastAPI()
+
+
+@app.get("/thread/{thread_id}")
+async def get_thread(thread_id: str):
+    return {"thread_id": thread_id, "messages": []}
 
 
 @app.websocket("/ws")
@@ -19,9 +25,9 @@ async def converse(websocket: WebSocket):
         msg_dict = json.loads(msg_json)
         msg_obj = Message(**msg_dict)
 
-        agent = Agent(name="WebSocket Agent")
+        agent = Agent(name="WebSocket Agent", inference_engine=LMStudio_IE())
 
-        async for state in agent.invoke(msg_obj):
+        async for state in agent.invoke(msg_obj, thread_id="1"):
             text = json.dumps(asdict(state))
             print(f"Sending state: {text}")
             await websocket.send_text(text)
