@@ -5,7 +5,7 @@ from time import time_ns
 
 from altron_core.types.dtypes import MessageThread
 
-THREAD_STORE: str = "./src/altron_core/threads"
+THREAD_STORE: str = "./threads"
 DEFAULT_THREAD_TITLE: str = "New Thread"
 
 

@@ -5,14 +5,10 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "docstring-parser>=0.17.0",
     "fastapi>=0.116.1",
-    "lmstudio>=1.4.1",
     "openai>=2.3.0",
-    "pydantic>=2.11.7",
     "python-dotenv>=1.1.1",
     "requests>=2.32.4",
-    "rich>=14.1.0",
     "uvicorn>=0.35.0",
     "websockets>=15.0.1",
 ]

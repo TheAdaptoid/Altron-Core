@@ -1,5 +1,5 @@
 # Project Specific
-src/altron_core/threads
+threads/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
