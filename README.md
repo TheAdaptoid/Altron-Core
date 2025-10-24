@@ -1,10 +1,10 @@
 # Altron Core
 
-*Altron Core* is the central processing engine for the Altron platform.
+The central processing engine for the Altron platform.
 
 ## Overview
 
-text
+This libray is the main backend service for all future Altron clients.
 
 ## Features
 
