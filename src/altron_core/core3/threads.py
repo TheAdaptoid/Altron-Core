@@ -1,5 +1,6 @@
-from altron_core.core3.dtypes import Message
 import json
+
+from altron_core.core3.dtypes import Message
 
 THREAD_STORE: str = "./src/altron_core/threads"
 

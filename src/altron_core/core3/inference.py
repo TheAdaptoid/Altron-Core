@@ -1,21 +1,14 @@
 import os
-from typing import Literal
-from openai import OpenAI
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field, asdict, astuple
 
-
+from dotenv import load_dotenv
+from openai import OpenAI
 from openai.types.chat import (
-    ChatCompletionMessageParam,
-    ChatCompletionUserMessageParam,
-    ChatCompletionAssistantMessageParam,
-    ChatCompletionSystemMessageParam,
     ChatCompletion,
-    ChatCompletionMessage,
+    ChatCompletionMessageParam,
 )
 
 from altron_core.core3.dtypes import Message
-from dotenv import load_dotenv
 
 
 def get_lmstudio_url() -> str:

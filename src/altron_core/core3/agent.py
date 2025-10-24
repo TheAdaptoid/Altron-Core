@@ -1,10 +1,9 @@
 from collections.abc import AsyncGenerator
 from dataclasses import asdict
-from random import random
 
 from altron_core.core3.dtypes import Message, StatePacket
 from altron_core.core3.inference import InferenceEngine
-from altron_core.core3.threads import load_thread, save_thread, append_to_thread
+from altron_core.core3.threads import load_thread, save_thread
 
 
 class Agent:

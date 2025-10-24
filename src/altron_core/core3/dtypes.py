@@ -1,13 +1,13 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Literal
+
 from openai.types.chat import (
-    ChatCompletionMessageParam,
-    ChatCompletionUserMessageParam,
     ChatCompletionAssistantMessageParam,
-    ChatCompletionSystemMessageParam,
-    ChatCompletion,
     ChatCompletionMessage,
+    ChatCompletionMessageParam,
+    ChatCompletionSystemMessageParam,
+    ChatCompletionUserMessageParam,
 )
 
 EMPTY_MESSAGE_TEXT = "[[No Text Content]]"
