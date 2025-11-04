@@ -1,11 +1,25 @@
 import asyncio
 import json
 from dataclasses import asdict
+from datetime import datetime
+from typing import Literal
 
 import requests
 import websockets
 
-from altron_core.types.dtypes import ConversePacket, Message, MessageThread
+from altron_core.types.dtypes import (
+    ConversePacket,
+    Message,
+    MessageThread,
+    StreamStatePacket,
+)
+
+# Colors for terminal output
+RESET_COLOR = "\033[0m"
+RED = "\033[31m"
+GREEN = "\033[32m"
+YELLOW = "\033[33m"
+BLUE = "\033[34m"
 
 
 async def init_thread() -> str:
@@ -26,6 +40,20 @@ async def delete_thread(thread_id: str) -> None:
     requests.delete(url)
 
 
+def display_user_msg() -> Message:
+    print(f"{YELLOW}User\t{RESET_COLOR}[{datetime.now().strftime('%H:%M:%S')}]")
+    user_input = input(f"{YELLOW}$ {RESET_COLOR}")
+    return Message(text=user_input, role="user")
+
+
+def display_agent_msg_header() -> None:
+    print(f"{BLUE}Agent\t{RESET_COLOR}[{datetime.now().strftime('%H:%M:%S')}]")
+
+
+def display_agent_msg_body(token: str) -> None:
+    print(f"{token}", end="", flush=True)
+
+
 async def converse(user_message: Message, thread_id: str) -> None:
     conv_pack: ConversePacket = ConversePacket(
         thread_id=thread_id, message=user_message
@@ -34,18 +62,28 @@ async def converse(user_message: Message, thread_id: str) -> None:
     uri = "ws://localhost:8000/ws"
 
     # Connect to the WebSocket server
-    async with websockets.connect(uri) as ws:
+    async with websockets.connect(uri, ping_interval=10, ping_timeout=20) as ws:
         await ws.send(conv_pack_text)
+        mode: Literal["thinking", "responding", "done"] = "done"
+        display_agent_msg_header()
 
         # Listen for responses until the connection is closed
         while True:
             try:
                 response = await ws.recv()
-                print(
-                    f"Altron >>> {json.dumps(json.loads(response), indent=2)}\n",
-                    end="",
-                    flush=True,
-                )
+                packet = StreamStatePacket(**json.loads(response))
+                if packet.curr_state == "thinking" and mode != "thinking":
+                    print(f"{BLUE}")
+                    mode = "thinking"
+                elif packet.curr_state == "responding" and mode != "responding":
+                    print(f"{GREEN}{'=' * 50}\n> {RESET_COLOR}", end="", flush=True)
+                    mode = "responding"
+
+                if packet.stream == "active" and packet.token:
+                    _token = packet.token
+                    if _token.startswith("\n") and mode == "thinking":
+                        _token = _token.lstrip("\n")
+                    display_agent_msg_body(_token)
 
             except websockets.ConnectionClosed:
                 print("\n\033[31m[[End of Line]]\033[0m\n")
@@ -62,11 +100,11 @@ async def main() -> None:
 
     # Start the conversation
     while True:
-        user_input: str = input("User >>> ")
-        if user_input == "exit":
+        user_msg: Message = display_user_msg()
+
+        if user_msg.text == "exit":
             break
 
-        user_msg: Message = Message(text=user_input, role="user")
         await converse(user_message=user_msg, thread_id=thread_id)
 
     # Delete the thread

@@ -85,6 +85,7 @@ async def delete_thread(thread_id: str) -> dict[str, str | bool]:
 @app.websocket("/ws")
 async def converse(websocket: WebSocket):
     await websocket.accept()
+    connected: bool = True
 
     try:
         # Parse the incoming packet
@@ -95,7 +96,7 @@ async def converse(websocket: WebSocket):
         # Spin up the agent
         agent = Agent(
             name="WebSocket Agent",
-            model_id="google/gemma-3-1b",
+            model_id="qwen/qwen3-4b-thinking-2507",
             inference_engine=LMStudio_IE(),
         )
 
@@ -105,19 +106,37 @@ async def converse(websocket: WebSocket):
         ):
             state_text: str = json.dumps(asdict(state))
             print(f"Sending state: {state_text}")
-            await websocket.send_text(state_text)
 
-            if state.prev_state in {"responding", "failed"}:
-                # Close the connection after responding or failing
+            try:
+                await websocket.send_text(state_text)
+            except (WebSocketDisconnect, WebSocketException, RuntimeError) as e:
+                print(f"Stopping Stream. Websocket error during send: {e}")
+                connected = False
+                return
+            except Exception as e:
+                print(f"Stopping Stream. Unexpected error during send: {e}")
+                connected = False
+                return
+
+            if state.curr_state == "done":
+                break
+
+        print("Conversation ended successfully.")
+    except WebSocketException as e:
+        print(f"WebSocket exception occurred while receiving/handling: {e}")
+        connected = False
+    except Exception as e:
+        print(f"Unhandled exception in converse handler: {e}")
+        connected = False
+    finally:
+        # only attempt a graceful close if we
+        # believe the client is still connected
+        if connected:
+            try:
                 await websocket.close()
-
-    except WebSocketDisconnect:
-        print("Client disconnected.")
-        await websocket.close()
-
-    except WebSocketException:
-        print("WebSocket exception occurred.")
-        await websocket.close()
+            except RuntimeError:
+                # If close already sent or connection lost, ignore
+                pass
 
 
 if __name__ == "__main__":
